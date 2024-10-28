@@ -1,0 +1,104 @@
+// schema.prisma
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+    directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model User {
+    id            Int        @id @default(autoincrement())
+    wallet        String     @unique
+    name          String?
+    referredById  Int?
+    matchId       Int?
+    userTypesId   Int
+    createdAt     DateTime   @default(now())
+    updatedAt     DateTime   @updatedAt
+    referredBy    User?      @relation("UserReferral", fields: [referredById], references: [id])
+    referrals     User[]     @relation("UserReferral")
+    matchesPlayed Match[]    @relation("PlayerMatches")
+    matchesWon    Match[]    @relation("MatchWinner")
+    Match         Match?     @relation(fields: [matchId], references: [id])
+    UserTypes     UserTypes? @relation(fields: [userTypesId], references: [id])
+
+    @@map(name: "users")
+}
+
+model UserTypes {
+    id              Int              @id @default(autoincrement())
+    name            String           @unique
+    investorType    Int?             @unique @map("investor_type")
+    playerLevelType Int?             @unique @map("player_level_type")
+    createdAt       DateTime         @default(now()) @map("created_at")
+    updatedAt       DateTime         @updatedAt @map("updated_at")
+    UserInvestor    InvestorTypes?   @relation(fields: [investorType], references: [id])
+    UserPlayer      PlayerTypeLevel? @relation(fields: [playerLevelType], references: [id])
+
+    User        User[]
+    PlayerTypes PlayerTypes[]
+    PlayerLevel PlayerLevel[]
+
+    @@map(name: "user_types")
+}
+
+model InvestorTypes {
+    id        Int        @id @default(autoincrement())
+    name      String     @unique
+    createdAt DateTime   @default(now()) @map("created_at")
+    updatedAt DateTime   @updatedAt @map("updated_at")
+    UserTypes UserTypes?
+
+    @@map(name: "investor_types")
+}
+
+model PlayerTypes {
+    id              Int               @id @default(autoincrement())
+    name            String            @unique
+    createdAt       DateTime          @default(now()) @map("created_at")
+    updatedAt       DateTime          @updatedAt @map("updated_at")
+    UserTypes       UserTypes?        @relation(fields: [userTypesId], references: [id])
+    userTypesId     Int?
+    PlayerTypeLevel PlayerTypeLevel[]
+
+    @@map(name: "player_types")
+}
+
+model PlayerLevel {
+    id              Int               @id @default(autoincrement())
+    name            String            @unique
+    createdAt       DateTime          @default(now()) @map("created_at")
+    updatedAt       DateTime          @updatedAt @map("updated_at")
+    UserTypes       UserTypes?        @relation(fields: [userTypesId], references: [id])
+    PlayerTypeLevel PlayerTypeLevel[]
+    userTypesId     Int?
+}
+
+model PlayerTypeLevel {
+    id          Int          @id @default(autoincrement())
+    levelId     Int          @map("level_id")
+    typeId      Int          @map("type_id")
+    createdAt   DateTime     @default(now()) @map("created_at")
+    updatedAt   DateTime     @updatedAt @map("updated_at")
+    PlayerTypes PlayerTypes? @relation(fields: [typeId], references: [id])
+    PlayerLevel PlayerLevel? @relation(fields: [levelId], references: [id])
+    UserTypes   UserTypes?
+
+    @@map("player_level_type")
+}
+
+model Match {
+    id        Int      @id @default(autoincrement())
+    winnerId  Int?
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+    players   User[]   @relation("PlayerMatches")
+    winner    User?    @relation("MatchWinner", fields: [winnerId], references: [id])
+    User      User[]
+
+    @@map(name: "match")
+}
